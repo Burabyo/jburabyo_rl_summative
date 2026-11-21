@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Imisoro Compliance Coach</title>
+<style>
+  :root { --bg:#0e1420; --panel:rgba(16,24,38,.86); --ink:#e8eef7; --muted:#8fa3bf; --line:#26344a;
+          --good:#3ecf8e; --bad:#ff5d6c; --warn:#ffb547; --accent:#4da3ff; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+              font:13px/1.4 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  #c { position:fixed; inset:0; }
+  .panel { position:fixed; background:var(--panel); border:1px solid var(--line); border-radius:10px;
+           padding:12px 14px; backdrop-filter:blur(6px); }
+  #hud { top:14px; left:14px; width:300px; }
+  #hud h1 { font-size:15px; margin:0 0 2px; letter-spacing:.2px; }
+  #hud .sub { color:var(--muted); font-size:12px; margin-bottom:10px; }
+  .row { display:flex; justify-content:space-between; margin:3px 0; }
+  .row b { font-variant-numeric:tabular-nums; }
+  .bar { height:7px; background:#1d2a3d; border-radius:4px; overflow:hidden; margin:2px 0 7px; }
+  .bar > i { display:block; height:100%; border-radius:4px; transition:width .25s; }
+  #action { font-size:16px; font-weight:600; margin:8px 0 2px; }
+  #resp { color:var(--muted); font-size:12px; }
+  #log { bottom:14px; left:14px; width:420px; max-height:200px; overflow:hidden; font-family:ui-monospace,Menlo,monospace; font-size:11.5px; }
+  #log div { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #legend { top:14px; right:14px; width:190px; font-size:12px; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+  .good { color:var(--good) } .bad { color:var(--bad) } .warn { color:var(--warn) }
+  #wait { position:fixed; inset:0; display:grid; place-items:center; color:var(--muted); font-size:15px; pointer-events:none; }
+  @media (max-width: 760px) { #legend { display:none } #log { width:calc(100% - 60px) } #hud { width:calc(100% - 60px) } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="wait">Waiting for the agent… run <code>&nbsp;uv run main.py play&nbsp;</code></div>
+<div id="hud" class="panel">
+  <h1>Imisoro Compliance Coach</h1>
+  <div class="sub" id="profile">–</div>
+  <div class="row"><span>Week</span><b id="week">0 / 52</b></div>
+  <div class="row"><span>Episode return</span><b id="ret">0.0</b></div>
+  <div class="row"><span>Filed on time / missed</span><b><span class="good" id="filed">0</span> / <span class="bad" id="missed">0</span></b></div>
+  <div class="row"><span>RRA escalations left</span><b id="esc">3</b></div>
+  <div id="action">–</div><div id="resp"></div>
+  <div style="margin-top:10px" id="bars"></div>
+</div>
+<div id="legend" class="panel">
+  <b>Deadline pillars</b><br>
+  <span class="sw" style="background:#4da3ff"></span>VAT (monthly)<br>
+  <span class="sw" style="background:#b07cff"></span>PAYE (monthly)<br>
+  <span class="sw" style="background:#ffb547"></span>Flat / lump-sum (quarterly)<br>
+  <span class="sw" style="background:#ff7a59"></span>Income tax / prepayment<br>
+  <span class="sw" style="background:#3ecf8e"></span>Filed on time<br>
+  <span class="sw" style="background:#ff3b4e"></span>Missed (penalty)<br><br>
+  <b>Agent messages</b><br>Orbs fly from the Imisoro tower to the shop. Escalations travel to RRA.<br><br>
+  Drag to orbit · scroll to zoom
+</div>
+<div id="log" class="panel"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const OBL_COLOR = { VAT: 0x4da3ff, PAYE: 0xb07cff, QUARTERLY: 0xffb547, ANNUAL: 0xff7a59 };
+const ACT_COLOR = { SMS_REMINDER: 0x4da3ff, EMAIL_DIGEST: 0x7fd1ff, RUN_CALCULATOR: 0xffd166,
+  EDUCATION_MODULE: 0x3ecf8e, RECORDS_NUDGE: 0xc792ea, SAVINGS_NUDGE: 0xf78c6c, ESCALATE_TO_RRA: 0xff5d6c };
+const BARS = [["knowledge","Tax knowledge","#3ecf8e"],["trust","Trust in Imisoro","#4da3ff"],
+  ["fatigue","Message fatigue","#ff5d6c"],["records","Records ready","#c792ea"],
+  ["cash","Tax money set aside","#ffd166"],["prep","Prep for next return","#7fd1ff"]];
+
+// ---------- scene
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1420);
+scene.fog = new THREE.Fog(0x0e1420, 40, 90);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+camera.position.set(0, 22, 30);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 1, 0); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.47;
+
+scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x1a1f2b, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(12, 25, 10); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -25, right: 25, top: 25, bottom: -25 });
+scene.add(sun);
+
+const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0x172235, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+function label(text, size = 48, color = "#e8eef7") {
+  const c = document.createElement("canvas"); const ctx = c.getContext("2d");
+  ctx.font = `600 ${size}px system-ui`; const w = ctx.measureText(text).width + 24;
+  c.width = w; c.height = size * 1.5; ctx.font = `600 ${size}px system-ui`;
+  ctx.fillStyle = color; ctx.textBaseline = "middle"; ctx.fillText(text, 12, c.height / 2);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  s.scale.set(w / c.height * 1.2, 1.2, 1); return s;
+}
+const box = (w, h, d, color, opts = {}) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: .6, ...opts }));
+  m.castShadow = m.receiveShadow = true; return m;
+};
+
+// shop (the small business)
+const shop = new THREE.Group(); scene.add(shop);
+const shopBody = box(5, 3, 4, 0xe9d8b4); shopBody.position.y = 1.5; shop.add(shopBody);
+const roof = box(5.8, 0.4, 4.8, 0x8b3a2b); roof.position.y = 3.2; shop.add(roof);
+const awning = box(5.2, 0.15, 1.4, 0x2f9e6e); awning.position.set(0, 2.3, 2.6); awning.rotation.x = 0.25; shop.add(awning);
+const door = box(1.2, 2, 0.1, 0x5a3a22); door.position.set(0, 1, 2.01); shop.add(door);
+const shopLabel = label("Small business"); shopLabel.position.set(0, 4.4, 0); shop.add(shopLabel);
+
+// RRA office
+const rra = new THREE.Group(); rra.position.set(-12, 0, -6); scene.add(rra);
+const rb = box(4, 5, 4, 0x2c4a7a); rb.position.y = 2.5; rra.add(rb);
+for (let i = -1; i <= 1; i++) { const col = box(0.4, 4, 0.4, 0xdfe7f2); col.position.set(i * 1.2, 2, 2.2); rra.add(col); }
+const rl = label("RRA office"); rl.position.set(0, 6.2, 0); rra.add(rl);
+
+// Imisoro AI tower
+const tower = new THREE.Group(); tower.position.set(12, 0, -6); scene.add(tower);
+const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1, 7, 16), new THREE.MeshStandardMaterial({ color: 0x9fb4cf, metalness: .6, roughness: .3 }));
+tb.position.y = 3.5; tb.castShadow = true; tower.add(tb);
+const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.7, 24, 16), new THREE.MeshStandardMaterial({ color: 0x4da3ff, emissive: 0x4da3ff, emissiveIntensity: 1 }));
+beacon.position.y = 7.4; tower.add(beacon);
+const tl = label("Imisoro AI"); tl.position.set(0, 9, 0); tower.add(tl);
+
+// state bars (3D) beside the shop
+const bar3d = {};
+BARS.forEach(([k, , col], i) => {
+  const g = new THREE.Group(); g.position.set(-4.5 + i * 1.8, 0, 6.5); scene.add(g);
+  const base = box(1, 0.1, 1, 0x223147); g.add(base);
+  const m = box(0.8, 1, 0.8, new THREE.Color(col).getHex(), { emissive: new THREE.Color(col), emissiveIntensity: .25 });
+  m.position.y = 0.5; g.add(m); bar3d[k] = m;
+  const short = { knowledge: "Know.", trust: "Trust", fatigue: "Fatigue", records: "Records", cash: "Cash", prep: "Prep" }[k];
+  const lb = label(short, 34, "#b9c6d8"); lb.scale.multiplyScalar(0.6); lb.position.set(0, 0.3, 1.0); lb.material.depthTest = false; lb.renderOrder = 10; g.add(lb);
+});
+
+// calendar ring
+const RING_R = 17, tiles = [], pillars = {};
+for (let w = 0; w < 52; w++) {
+  const a = (w / 52) * Math.PI * 2 - Math.PI / 2;
+  const t = box(1.6, 0.2, 1.0, 0x24324a); t.position.set(Math.cos(a) * RING_R, 0.1, Math.sin(a) * RING_R);
+  t.rotation.y = -a; scene.add(t); tiles.push(t);
+  if (w % 13 === 0) { const ml = label(["Jan", "Apr", "Jul", "Oct"][w / 13], 40, "#8fa3bf");
+    ml.position.set(Math.cos(a) * (RING_R + 2.6), 0.8, Math.sin(a) * (RING_R + 2.6)); scene.add(ml); }
+}
+const marker = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.4, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: .6 }));
+marker.rotation.x = Math.PI; scene.add(marker);
+
+function buildCalendar(cal) {
+  Object.values(pillars).forEach(p => scene.remove(p.group));
+  for (const k in pillars) delete pillars[k];
+  for (const [wk, obls] of Object.entries(cal)) {
+    const w = +wk, a = (w / 52) * Math.PI * 2 - Math.PI / 2, g = new THREE.Group();
+    g.position.set(Math.cos(a) * RING_R, 0.2, Math.sin(a) * RING_R);
+    obls.forEach((o, i) => { const p = box(0.45, 1.6, 0.45, OBL_COLOR[o], { emissive: OBL_COLOR[o], emissiveIntensity: .35 });
+      p.position.set((i - (obls.length - 1) / 2) * 0.55, 0.8, 0); p.userData.obl = o; g.add(p); });
+    scene.add(g); pillars[w] = { group: g, resolved: false };
+  }
+}
+
+// flying message orbs
+const orbs = [];
+function sendOrb(from, to, color) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 14), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.2 }));
+  scene.add(m); orbs.push({ m, from: from.clone(), to: to.clone(), t: 0 });
+}
+const TOWER_TOP = new THREE.Vector3(12, 7.4, -6), SHOP_DOOR = new THREE.Vector3(0, 2.5, 2), RRA_TOP = new THREE.Vector3(-12, 5.5, -6);
+
+// ---------- HUD
+const $ = id => document.getElementById(id);
+$("bars").innerHTML = BARS.map(([k, n, c]) => `<div class="row"><span>${n}</span><b id="v_${k}">0.00</b></div><div class="bar"><i id="b_${k}" style="background:${c};width:0"></i></div>`).join("");
+const NAMES = { WAIT: "Wait (no contact)", SMS_REMINDER: "SMS reminder", EMAIL_DIGEST: "Email digest + calendar", RUN_CALCULATOR: "Run tax calculator",
+  EDUCATION_MODULE: "Kinyarwanda micro-lesson", RECORDS_NUDGE: "Record-keeping nudge", SAVINGS_NUDGE: "Set-aside savings nudge", ESCALATE_TO_RRA: "Escalate to RRA" };
+
+let lastSeq = -1, lastWeek = -1, calKey = "";
+const logLines = [];
+function update(s) {
+  $("wait").style.display = "none";
+  const key = JSON.stringify(s.calendar);
+  if (key !== calKey || s.week < lastWeek) { buildCalendar(s.calendar); calKey = key; logLines.length = 0; }
+  $("profile").textContent = `${s.regime.replace("_", "-")} regime · ${s.vat_registered ? "VAT registered" : "no VAT"} · ${s.has_employees ? "has employees" : "no employees"} · scenario: ${s.scenario}`;
+  $("week").textContent = `${s.week} / 52`;
+  $("ret").textContent = s.ep_return.toFixed(1);
+  $("ret").className = s.ep_return >= 0 ? "good" : "bad";
+  $("filed").textContent = s.filed; $("missed").textContent = s.missed; $("esc").textContent = s.escalations_left;
+  const L = s.last || {};
+  $("action").textContent = L.action ? NAMES[L.action] : "Start of tax year";
+  $("resp").innerHTML = L.responded == null ? "" : (L.action === "WAIT" ? "letting the owner rest" : (L.responded ? '<span class="good">owner responded</span>' : '<span class="warn">owner ignored it</span>')) + (L.action ? ` · reward ${L.reward >= 0 ? "+" : ""}${L.reward.toFixed(2)}` : "");
+  BARS.forEach(([k]) => { const v = Math.max(0, Math.min(1, s[k])); $("v_" + k).textContent = v.toFixed(2); $("b_" + k).style.width = (v * 100) + "%";
+    bar3d[k].userData.target = Math.max(0.05, v * 4); });
+  if (L.action && L.action !== "WAIT" && s.seq !== lastSeq) {
+    if (L.action === "ESCALATE_TO_RRA") sendOrb(SHOP_DOOR, RRA_TOP, ACT_COLOR[L.action]);
+    else sendOrb(TOWER_TOP, SHOP_DOOR, ACT_COLOR[L.action]);
+  }
+  // resolve pillars for the week just finished
+  for (const h of (s.history || [])) {
+    const pl = pillars[h.week - 1];
+    if (!pl || pl.resolved) continue;
+    pl.resolved = true;
+    pl.group.children.forEach(p => {
+      const ok = h.events.some(e => e.startsWith(p.userData.obl) && !e.includes("MISSED"));
+      p.material.color.setHex(ok ? 0x3ecf8e : 0xff3b4e); p.material.emissive.setHex(ok ? 0x3ecf8e : 0xff3b4e);
+      p.scale.y = ok ? 1.3 : 0.5; p.position.y = ok ? 1.05 : 0.4;
+    });
+  }
+  if (s.week < 52) { const a = (s.week / 52) * Math.PI * 2 - Math.PI / 2; marker.userData.target = new THREE.Vector3(Math.cos(a) * RING_R, 3.2, Math.sin(a) * RING_R); }
+  tiles.forEach((t, i) => t.material.color.setHex(i < s.week ? 0x31445f : (i === s.week ? 0x5b7aa6 : 0x24324a)));
+  shopBody.material.color.setHex(s.opted_out ? 0x555b66 : 0xe9d8b4);
+  shopLabel.material.opacity = 1;
+  if (s.seq !== lastSeq && L.action) {
+    const ev = (L.events || []).join("; ");
+    const cls = ev.includes("MISSED") || ev.includes("OPTED") ? "bad" : ev.includes("on time") ? "good" : "";
+    logLines.unshift(`<div class="${cls}">wk ${String(s.week).padStart(2)} ${L.action.padEnd(17)} ${L.reward >= 0 ? "+" : ""}${L.reward.toFixed(1).padStart(5)} ${ev}</div>`);
+    logLines.length = Math.min(logLines.length, 11); $("log").innerHTML = logLines.join("");
+  }
+  lastSeq = s.seq; lastWeek = s.week;
+}
+
+async function poll() {
+  try { const r = await fetch("/state", { cache: "no-store" }); const s = await r.json(); if (s.seq && s.seq !== lastSeq) update(s); } catch (e) {}
+  setTimeout(poll, 100);
+}
+poll();
+
+// ---------- loop
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta(), t = clock.elapsedTime;
+  beacon.material.emissiveIntensity = 0.7 + 0.5 * Math.sin(t * 3);
+  for (const k in bar3d) { const m = bar3d[k], tg = m.userData.target ?? 0.05; m.scale.y += (tg - m.scale.y) * 0.15; m.position.y = m.scale.y / 2 + 0.05; }
+  if (marker.userData.target) { marker.position.lerp(marker.userData.target, 0.15); marker.rotation.y += dt * 2; }
+  for (let i = orbs.length - 1; i >= 0; i--) {
+    const o = orbs[i]; o.t += dt * 1.6;
+    const p = o.from.clone().lerp(o.to, Math.min(o.t, 1)); p.y += Math.sin(Math.min(o.t, 1) * Math.PI) * 4;
+    o.m.position.copy(p); if (o.t >= 1) { scene.remove(o.m); orbs.splice(i, 1); }
+  }
+  controls.update(); renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
