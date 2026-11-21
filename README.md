@@ -14,7 +14,7 @@ Four TorchRL agents are compared on the same environment: **DQN**, **REINFORCE**
 ## Quick start (uv only)
 
 ```bash
-git clone https://github.com/<your-username>/jburabyo_rl_summative.git
+git clone https://github.com/Burabyo/jburabyo_rl_summative.git
 cd jburabyo_rl_summative
 uv sync
 uv run main.py            # plays the best trained agent: opens the 3D view + verbose terminal log

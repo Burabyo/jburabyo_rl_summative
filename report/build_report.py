@@ -24,7 +24,7 @@ OUT = ROOT / "report" / "RL_Summative_Report.docx"
 
 STUDENT = "J. Burabyo"            # edit: full name
 VIDEO = "[add video link]"         # edit
-REPO = "https://github.com/<your-username>/jburabyo_rl_summative"  # edit
+REPO = "https://github.com/Burabyo/jburabyo_rl_summative"  # edit
 
 df = pd.read_csv(ROOT / "logs" / "sweep_results.csv")
 df0 = df[df.seed == 0].copy()
