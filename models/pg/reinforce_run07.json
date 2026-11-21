@@ -1,0 +1,54 @@
+{
+  "cfg": {
+    "algo": "reinforce",
+    "lr": 0.001,
+    "gamma": 0.995,
+    "hidden": 64,
+    "episodes_per_batch": 8,
+    "n_envs": 8,
+    "entropy_coeff": 0.01,
+    "baseline": "value",
+    "normalize_returns": true,
+    "critic_coeff": 0.5,
+    "grad_clip": 1.0
+  },
+  "algo": "REINFORCE",
+  "run": "reinforce_run07",
+  "frames": 300352,
+  "eval_train": {
+    "return_mean": -22.253566227566797,
+    "return_std": 40.03614459439336,
+    "compliance": 0.6957589285714286,
+    "opt_out": 0.0,
+    "filed": 10.035,
+    "missed": 3.865,
+    "action_dist": [
+      0.0003,
+      0.0,
+      0.0,
+      0.0,
+      0.6438,
+      0.0087,
+      0.3344,
+      0.0128
+    ]
+  },
+  "eval_stress": {
+    "return_mean": -47.97879512451837,
+    "return_std": 19.66284726977855,
+    "compliance": 0.4010119047619047,
+    "opt_out": 0.915,
+    "filed": 1.045,
+    "missed": 1.73,
+    "action_dist": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.5872,
+      0.0,
+      0.3478,
+      0.065
+    ]
+  }
+}

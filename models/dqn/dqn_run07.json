@@ -1,0 +1,60 @@
+{
+  "cfg": {
+    "lr": 0.0005,
+    "gamma": 0.97,
+    "batch_size": 128,
+    "buffer_size": 50000,
+    "hidden": 128,
+    "eps_start": 1.0,
+    "eps_end": 0.1,
+    "eps_fraction": 0.6,
+    "target_update": "soft",
+    "tau": 0.01,
+    "hard_interval": 500,
+    "double_dqn": true,
+    "updates_per_batch": 8,
+    "frames_per_batch": 64,
+    "init_random_frames": 2000,
+    "loss": "smooth_l1",
+    "grad_clip": 10.0
+  },
+  "algo": "DQN",
+  "run": "dqn_run07",
+  "frames": 300032,
+  "eval_train": {
+    "return_mean": -31.857478332842394,
+    "return_std": 61.379726797110806,
+    "compliance": 0.6840625,
+    "opt_out": 0.0,
+    "filed": 9.22,
+    "missed": 4.68,
+    "action_dist": [
+      0.0544,
+      0.2766,
+      0.0026,
+      0.1873,
+      0.0001,
+      0.1627,
+      0.2674,
+      0.0488
+    ]
+  },
+  "eval_stress": {
+    "return_mean": -84.03830469770686,
+    "return_std": 74.05476991898865,
+    "compliance": 0.506840903359925,
+    "opt_out": 0.475,
+    "filed": 4.79,
+    "missed": 5.595,
+    "action_dist": [
+      0.0512,
+      0.3018,
+      0.0164,
+      0.217,
+      0.0,
+      0.1998,
+      0.1384,
+      0.0755
+    ]
+  }
+}

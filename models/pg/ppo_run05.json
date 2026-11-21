@@ -1,0 +1,57 @@
+{
+  "cfg": {
+    "algo": "ppo",
+    "lr": 0.0003,
+    "gamma": 0.97,
+    "gae_lambda": 0.95,
+    "hidden": 64,
+    "n_envs": 8,
+    "steps_per_env": 128,
+    "epochs": 4,
+    "minibatch_size": 256,
+    "clip_epsilon": 0.3,
+    "entropy_coeff": 0.01,
+    "critic_coeff": 0.5,
+    "normalize_advantage": true,
+    "grad_clip": 0.5
+  },
+  "algo": "PPO",
+  "run": "ppo_run05",
+  "frames": 300032,
+  "eval_train": {
+    "return_mean": -16.046953752955538,
+    "return_std": 38.35559846670692,
+    "compliance": 0.7548660714285714,
+    "opt_out": 0.0,
+    "filed": 10.67,
+    "missed": 3.23,
+    "action_dist": [
+      0.0,
+      0.1826,
+      0.0,
+      0.0,
+      0.3662,
+      0.426,
+      0.0004,
+      0.0249
+    ]
+  },
+  "eval_stress": {
+    "return_mean": -45.05704282509203,
+    "return_std": 18.580783864383687,
+    "compliance": 0.5117261904761905,
+    "opt_out": 0.91,
+    "filed": 1.38,
+    "missed": 1.475,
+    "action_dist": [
+      0.0,
+      0.0055,
+      0.0,
+      0.0,
+      0.4441,
+      0.4324,
+      0.0,
+      0.118
+    ]
+  }
+}

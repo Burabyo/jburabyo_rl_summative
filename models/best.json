@@ -1,0 +1,29 @@
+{
+  "overall": "ppo",
+  "per_algo": {
+    "a2c": {
+      "run": "a2c_run05",
+      "path": "models/pg/a2c_best.ts",
+      "eval_return_mean": -20.625312958371367,
+      "eval_compliance": 0.7594196428571428
+    },
+    "dqn": {
+      "run": "dqn_run08",
+      "path": "models/dqn/dqn_best.ts",
+      "eval_return_mean": -19.802266298600436,
+      "eval_compliance": 0.6760267857142856
+    },
+    "ppo": {
+      "run": "ppo_run06",
+      "path": "models/pg/ppo_best.ts",
+      "eval_return_mean": -6.173361403458621,
+      "eval_compliance": 0.7484821428571429
+    },
+    "reinforce": {
+      "run": "reinforce_run11",
+      "path": "models/pg/reinforce_best.ts",
+      "eval_return_mean": -16.631890725883146,
+      "eval_compliance": 0.6522321428571428
+    }
+  }
+}

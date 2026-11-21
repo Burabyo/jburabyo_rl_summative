@@ -1,0 +1,54 @@
+{
+  "cfg": {
+    "algo": "a2c",
+    "lr": 0.0007,
+    "gamma": 0.97,
+    "gae_lambda": 1.0,
+    "hidden": 128,
+    "n_envs": 16,
+    "steps_per_env": 8,
+    "entropy_coeff": 0.01,
+    "critic_coeff": 0.5,
+    "normalize_advantage": false,
+    "grad_clip": 0.5
+  },
+  "algo": "A2C",
+  "run": "a2c_run12",
+  "frames": 300032,
+  "eval_train": {
+    "return_mean": -37.00995159923092,
+    "return_std": 59.42902278695384,
+    "compliance": 0.6908482142857143,
+    "opt_out": 0.0,
+    "filed": 9.275,
+    "missed": 4.625,
+    "action_dist": [
+      0.2069,
+      0.3385,
+      0.0,
+      0.0,
+      0.0,
+      0.3485,
+      0.0667,
+      0.0394
+    ]
+  },
+  "eval_stress": {
+    "return_mean": -114.70978224951931,
+    "return_std": 87.12741464052996,
+    "compliance": 0.4766964285714285,
+    "opt_out": 0.0,
+    "filed": 7.325,
+    "missed": 8.975,
+    "action_dist": [
+      0.1078,
+      0.3252,
+      0.0,
+      0.0,
+      0.0,
+      0.4572,
+      0.0637,
+      0.0462
+    ]
+  }
+}
