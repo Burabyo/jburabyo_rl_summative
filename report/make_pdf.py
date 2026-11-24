@@ -25,11 +25,14 @@ td p { margin: 0; }
 tr { break-inside: avoid; }
 tr:first-child td, th { background: #DCE6F2; font-weight: bold; text-align: left; }
 img { display: block; margin: 3pt auto 0; width: 88%; break-inside: avoid; }
-body > p:first-child strong { font-size: 16pt; }
+.alu { font-size: 8pt; font-weight: bold; color: #555; margin-bottom: 8pt; }
+body > p:nth-child(2) strong { font-size: 16pt; }
 """
 
 with open(HERE / "RL_Summative_Report.docx", "rb") as f:
     body = mammoth.convert_to_html(f).value
+ALU = ("<div class='alu'>AFRICAN LEADERSHIP UNIVERSITY<br>[BSE]<br>[ML TECHNIQUES II]<br>[SUMMATIVE ASSIGNMENT]</div>")
+body = ALU + body
 html = HERE / "_report.html"
 html.write_text(f"<!doctype html><html><head><meta charset='utf-8'><style>{CSS}</style></head><body>{body}</body></html>")
 out = HERE / "RL_Summative_Report.pdf"

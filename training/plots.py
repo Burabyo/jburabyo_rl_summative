@@ -74,29 +74,31 @@ def make_all():
     best = json.loads((ROOT / "models" / "best.json").read_text())["per_algo"]
     seeds = pd.read_csv(LOGS / "seed_robustness.csv") if (LOGS / "seed_robustness.csv").exists() else None
 
-    # 1. comparative training reward (best run per algorithm)
-    fig, ax = plt.subplots(figsize=(7, 3.6))
-    for a in ALGOS:
+    # 1. episode return vs episodes for each algorithm's best model (one subplot per method)
+    fig, axes = plt.subplots(2, 2, figsize=(8, 5.0), sharey=True)
+    for ax, a in zip(axes.flat, ALGOS):
         c = _curve(a, best[a]["run"])
-        ax.plot(c.frames, smooth(c.episodes_reward, 15), color=COLOR[a], lw=1.8,
-                label=f"{LABEL[a]} ({best[a]['run'].split('_')[1]})")
-    ax.set(xlabel="Environment steps (weeks simulated)", ylabel="Mean episode return (smoothed)",
-           title="Training reward of the best configuration per algorithm")
-    ax.legend(frameon=False, ncol=4, loc="lower right")
+        ep = c.n_episodes.cumsum()
+        ax.plot(ep, c.episodes_reward, color=COLOR[a], lw=0.6, alpha=0.3)
+        ax.plot(ep, smooth(c.episodes_reward, 15), color=COLOR[a], lw=1.8)
+        ax.set_title(f"{LABEL[a]} best model ({best[a]['run'].split('_')[1]})")
+        ax.set_xlabel("training episodes (tax years)")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("episode return")
     fig.tight_layout()
     fig.savefig(ASSETS / "fig1_reward_comparison.png")
     plt.close(fig)
 
     # 2. sweep spread: all 12 runs per algorithm (convergence + stability)
-    fig, axes = plt.subplots(2, 2, figsize=(8, 5.4), sharey=True)
+    fig, axes = plt.subplots(2, 2, figsize=(8, 5.0), sharey=True)
     for ax, a in zip(axes.flat, ALGOS):
         for r in df0[df0.algo == a].itertuples():
             c = _curve(a, r.run)
             isbest = r.run == best[a]["run"]
-            ax.plot(c.frames, smooth(c.episodes_reward, 15), color=COLOR[a] if isbest else "#b8c2cc",
+            ax.plot(c.n_episodes.cumsum(), smooth(c.episodes_reward, 15), color=COLOR[a] if isbest else "#b8c2cc",
                     lw=2 if isbest else 0.8, zorder=3 if isbest else 1)
         ax.set_title(f"{LABEL[a]} (12 runs, best in colour)")
-        ax.set_xlabel("steps")
+        ax.set_xlabel("training episodes")
     axes[0, 0].set_ylabel("episode return")
     axes[1, 0].set_ylabel("episode return")
     fig.tight_layout()

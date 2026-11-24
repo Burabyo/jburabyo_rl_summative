@@ -40,6 +40,12 @@ for side in ("left_margin", "right_margin"):
     setattr(sec, side, Cm(2.0))
 sec.top_margin = sec.bottom_margin = Cm(1.9)
 
+hdr = sec.header.paragraphs[0]
+hdr.alignment = WD_ALIGN_PARAGRAPH.LEFT
+_hr = hdr.add_run("AFRICAN LEADERSHIP UNIVERSITY\n[BSE]\n[ML TECHNIQUES II]\n[SUMMATIVE ASSIGNMENT]")
+_hr.bold, _hr.font.size = True, Pt(8)
+_hr.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+
 st = doc.styles
 st["Normal"].font.name = "Calibri"
 st["Normal"].font.size = Pt(11)
@@ -150,11 +156,11 @@ P(NAR["overview"])
 
 # ------------------------------------------------------------------ 2
 doc.add_heading("2. Environment Description", 1)
-doc.add_heading("2.1 Agent(s)", 2)
+doc.add_heading("a. Agent(s)", 2)
 P(NAR["agent"])
 P(NAR["why_rl"], "Why RL is needed. ")
 
-doc.add_heading("2.2 Action Space", 2)
+doc.add_heading("b. Action Space", 2)
 P("Discrete(8). One intervention per week. Each action maps to a feature of the Imisoro product or "
   "to an existing RRA channel:")
 acts = [
@@ -169,36 +175,41 @@ acts = [
 ]
 table(["Action", "Real-world meaning and effect", "Cost"], acts, [3.6, 11.0, 1.6])
 
-doc.add_heading("2.3 Observation Space", 2)
+doc.add_heading("c. Observation Space", 2)
 P("Box(0, 1, shape=(21,)). The owner's true knowledge, trust and fatigue are hidden (partially observable). "
   "The agent sees only signals the app can actually collect:")
 obs = [
-    ("week_frac, weeks_to_deadline, n_due_next", "w/52; min(Δw,8)/8; count/3", "Tax-calendar engine built from profile", "Weekly"),
-    ("next_vat / paye / quarterly / annual", "one-hot", "Calendar engine (RRA due dates)", "Weekly"),
-    ("regime one-hot, has_employees, vat_registered", "binary", "Onboarding profile + turnover calculator", "At onboarding"),
-    ("digital_literacy", "[0,1]", "Onboarding survey (channel preference)", "At onboarding"),
-    ("prep_progress", "[0,1]", "Calculator/draft-return completion in app", "On app event"),
-    ("records_score", "[0,1]", "EBM sync / sales-log days in last 30", "Daily sync"),
-    ("cash_ratio", "set-aside ÷ liability", "In-app savings tracker (self-report)", "On update"),
-    ("engagement_rate", "EMA of responses", "SMS/email open & reply logs", "On contact"),
-    ("contacts_4w", "count/4", "Message log", "Weekly"),
-    ("quiz_score", "knowledge + N(0,0.05)", "Quiz after lessons (noisy proxy)", "On lesson"),
-    ("missed_frac, escalations_left", "count/5; left/3", "Filing confirmation (e-Tax), escalation log", "Per deadline"),
+    ("week_frac", "Week of the tax year", "API: Imisoro calendar service (system date)", "float32, week/52", "[0, 1]"),
+    ("weeks_to_deadline", "Weeks until the next obligation", "Dataset: RRA published due-date calendar + profile", "float32, min(Δw, 8)/8", "[0, 1]"),
+    ("n_due_next", "Obligations due at the next deadline", "Dataset: RRA due-date calendar", "float32, count/3", "[0, 1]"),
+    ("next_vat / next_paye / next_quarterly / next_annual", "Type(s) of the next obligation", "Dataset: RRA due-date calendar", "float32 one-hot (4)", "{0, 1}"),
+    ("regime_flat / lump / real", "Tax regime of the business", "API: onboarding form (turnover → regime rule)", "float32 one-hot (3)", "{0, 1}"),
+    ("has_employees", "Business has staff (PAYE due)", "API: onboarding form", "float32 binary", "{0, 1}"),
+    ("vat_registered", "Registered for VAT", "API: onboarding form; RRA TIN lookup", "float32 binary", "{0, 1}"),
+    ("digital_literacy", "Ability to use email/app", "API: onboarding survey", "float32", "[0, 1]"),
+    ("prep_progress", "Calculator / draft-return completion", "API: Imisoro app event log", "float32", "[0, 1]"),
+    ("records_score", "Days with sales logged in last 30", "API: EBM receipt sync / sales log", "float32", "[0, 1]"),
+    ("cash_ratio", "Tax money set aside ÷ liability", "API: in-app savings tracker (self-report)", "float32, clipped at 1", "[0, 1]"),
+    ("engagement_rate", "Moving average of responses to contacts", "API: SMS gateway & email open/reply webhooks", "float32 (EMA)", "[0, 1]"),
+    ("contacts_4w", "Contacts sent in the last 4 weeks", "Dataset: Imisoro message log (database)", "float32, count/4", "[0, 1]"),
+    ("quiz_score", "Noisy proxy for tax knowledge", "API: in-app quiz results", "float32, knowledge + N(0, 0.05)", "[0, 1]"),
+    ("missed_frac", "Deadlines missed so far", "API: RRA e-Tax filing confirmation", "float32, min(count, 5)/5", "[0, 1]"),
+    ("escalations_left", "RRA escalations remaining this year", "Dataset: Imisoro escalation log", "float32, left/3", "[0, 1]"),
 ]
-table(["Observation(s)", "Encoding / range", "Source or simulation rule", "Cadence"], obs, [5.0, 3.3, 5.6, 2.3], font=8)
-P("All features are clipped to [0,1] and fed directly into the MLP input layer as a float32 vector "
-  "(agent-input path: env → TorchRL GymWrapper → 'observation' key → network).", size=10)
+table(["Observation", "Description", "Source (Sensor/Camera/API/Dataset)", "Encoding / Data Type", "Range"], obs,
+      [3.6, 3.7, 4.6, 3.0, 1.3], font=7.5)
+P("Input path: env → TorchRL GymWrapper → 'observation' (float32[21]) → network.", size=10)
 
-doc.add_heading("2.4 Reward Structure", 2)
+doc.add_heading("d. Reward Structure", 2)
 P(NAR["reward"])
 P("r_t = −c(a_t) + Σ_obligations due at t [ 10·1(on-time ∧ cash ≥ 0.6) + 4·1(on-time ∧ cash < 0.6) − 15·1(missed) ] "
   "− 25·1(opt-out) + 5·knowledge·1(t = 52)", italic=True, size=10)
 P(NAR["p_on_time"], size=10)
 
-doc.add_heading("2.5 Start State and Terminal Conditions", 2)
+doc.add_heading("e. Start State and Terminal Conditions", 2)
 P(NAR["start_terminal"])
 
-doc.add_heading("2.6 Environment Visualization", 2)
+doc.add_heading("f. Environment Visualization", 2)
 figure(A / "env_render.png", "Figure 1. Three.js 3D view: the small business (centre), Imisoro AI tower, RRA office, "
        "the 52-week calendar ring with obligation pillars (green = filed on time, red = missed), live owner-state bars "
        "and HUD. Message orbs animate each intervention.", 15.5)
@@ -206,9 +217,9 @@ P(NAR["visual"], size=10)
 
 # ------------------------------------------------------------------ 3
 doc.add_heading("3. System Analysis and Design", 1)
-doc.add_heading("3.1 Deep Q-Network (DQN)", 2)
+doc.add_heading("a. Deep Q-Network (DQN)", 2)
 P(NAR["dqn_design"])
-doc.add_heading("3.2 Policy Gradient Methods (REINFORCE, PPO, A2C)", 2)
+doc.add_heading("b. Policy Gradient Methods (REINFORCE, PPO, A2C)", 2)
 P(NAR["pg_design"])
 P(NAR["fairness"], "Fair comparison. ")
 
@@ -223,28 +234,28 @@ def fmt(v):
 
 
 SPECS = {
-    "dqn": ("4.1 DQN", ["#", "LR", "γ", "Buffer", "Batch", "Exploration (ε end / decay frac)", "Target update", "Double", "Upd/batch", "Hidden",
-                         "Mean reward", "On-time %"],
+    "dqn": ("a. DQN", ["#", "Learning Rate", "Gamma", "Replay Buffer Size", "Batch Size", "Exploration Strategy (ε-greedy: end / decay frac)", "Target update", "Double", "Upd/batch", "Hidden",
+                         "Mean Reward", "On-time %"],
             lambda r: [r.idx, fmt(r.hp_lr), fmt(r.hp_gamma), int(r.hp_buffer_size), int(r.hp_batch_size),
                        f"{fmt(r.hp_eps_end)} / {fmt(r.hp_eps_fraction)}",
                        f"soft τ={fmt(r.hp_tau)}" if r.hp_target_update == "soft" else f"hard/{int(r.hp_hard_interval)}",
                        "Y" if str(r.hp_double_dqn) == "True" else "N", int(r.hp_updates_per_batch), int(r.hp_hidden),
                        f"{r.eval_return_mean:+.1f}", f"{100 * r.eval_compliance:.1f}"],
-            [0.6, 1.1, 1.0, 1.2, 1.0, 2.4, 1.9, 1.0, 1.1, 1.1, 1.6, 1.4]),
-    "reinforce": ("4.2 REINFORCE", ["#", "LR", "γ", "Episodes/update", "Baseline", "Return norm.", "Entropy coef", "Hidden",
-                                    "Mean reward", "On-time %"],
+            [0.6, 1.3, 1.1, 1.5, 1.2, 2.4, 1.8, 0.9, 1.0, 1.0, 1.4, 1.2]),
+    "reinforce": ("b. REINFORCE", ["#", "Learning Rate", "Gamma", "Episodes/update", "Baseline", "Return norm.", "Entropy coef", "Hidden",
+                                    "Mean Reward", "On-time %"],
                   lambda r: [r.idx, fmt(r.hp_lr), fmt(r.hp_gamma), int(r.hp_episodes_per_batch), r.hp_baseline,
                              "Y" if str(r.hp_normalize_returns) == "True" else "N", fmt(r.hp_entropy_coeff),
                              int(r.hp_hidden), f"{r.eval_return_mean:+.1f}", f"{100 * r.eval_compliance:.1f}"],
                   [0.6, 1.3, 1.2, 2.0, 1.8, 1.7, 1.8, 1.3, 2.0, 1.7]),
-    "ppo": ("4.3 PPO", ["#", "LR", "γ", "GAE λ", "Clip ε", "Epochs", "Minibatch", "Rollout (envs×steps)", "Entropy coef",
-                        "Mean reward", "On-time %"],
+    "ppo": ("c. PPO", ["#", "Learning Rate", "Gamma", "GAE λ", "Clip ε", "Epochs", "Minibatch", "Rollout (envs×steps)", "Entropy coef",
+                        "Mean Reward", "On-time %"],
             lambda r: [r.idx, fmt(r.hp_lr), fmt(r.hp_gamma), fmt(r.hp_gae_lambda), fmt(r.hp_clip_epsilon),
                        int(r.hp_epochs), int(r.hp_minibatch_size), f"{int(r.hp_n_envs)}×{int(r.hp_steps_per_env)}",
                        fmt(r.hp_entropy_coeff), f"{r.eval_return_mean:+.1f}", f"{100 * r.eval_compliance:.1f}"],
             [0.6, 1.2, 1.1, 1.2, 1.2, 1.2, 1.6, 2.4, 1.7, 1.8, 1.6]),
-    "a2c": ("4.4 Actor-Critic (A2C)", ["#", "LR", "γ", "GAE λ", "n-steps × envs", "Entropy coef", "Critic coef", "Adv. norm",
-                                       "Hidden", "Mean reward", "On-time %"],
+    "a2c": ("d. Actor-Critic (A2C)", ["#", "Learning Rate", "Gamma", "GAE λ", "n-steps × envs", "Entropy coef", "Critic coef", "Adv. norm",
+                                       "Hidden", "Mean Reward", "On-time %"],
             lambda r: [r.idx, fmt(r.hp_lr), fmt(r.hp_gamma), fmt(r.hp_gae_lambda),
                        f"{int(r.hp_steps_per_env)} × {int(r.hp_n_envs)}", fmt(r.hp_entropy_coeff), fmt(r.hp_critic_coeff),
                        "Y" if str(r.hp_normalize_advantage) == "True" else "N", int(r.hp_hidden),
@@ -261,8 +272,8 @@ for algo, (title, header, rowf, widths) in SPECS.items():
 
 # ------------------------------------------------------------------ 5
 doc.add_heading("5. Results Discussion", 1)
-doc.add_heading("5.1 Cumulative Rewards", 2)
-figure(A / "fig1_reward_comparison.png", "Figure 2. Mean training episode return of the best configuration of each algorithm (rolling mean).", 15)
+doc.add_heading("a. Cumulative Rewards", 2)
+figure(A / "fig1_reward_comparison.png", "Figure 2. Episode return over training episodes for each algorithm's best model (thin: per batch; bold: rolling mean).", 13.5)
 P(NAR["cumulative"])
 summ = []
 for a, lab in (("dqn", "DQN"), ("reinforce", "REINFORCE"), ("ppo", "PPO"), ("a2c", "A2C")):
@@ -278,19 +289,19 @@ table(["Algorithm", "Best run", "Eval return (200 businesses)", "On-time %", "Fi
       [2.0, 2.6, 2.6, 1.5, 2.0, 2.4, 1.6, 1.6], font=8)
 P(NAR["baselines"], size=10)
 
-doc.add_heading("5.2 Training Stability", 2)
-figure(A / "fig3_dqn_objective.png", "Figure 3. DQN objective: TD loss (log scale), mean max-Q on replay batches and ε schedule.", 16)
-figure(A / "fig4_pg_entropy.png", "Figure 4. Policy entropy of the policy-gradient methods (left) and PPO's sensitivity to the entropy coefficient (right).", 15.5)
+doc.add_heading("Training Stability", 3)
+figure(A / "fig3_dqn_objective.png", "Figure 3. DQN objective: TD loss (log scale), mean max-Q on replay batches and ε schedule.", 15)
+figure(A / "fig4_pg_entropy.png", "Figure 4. Policy entropy of the policy-gradient methods (left) and PPO's sensitivity to the entropy coefficient (right).", 14.0)
 P(NAR["stability"])
 
-doc.add_heading("5.3 Episodes to Converge", 2)
-figure(A / "fig2_sweep_convergence.png", "Figure 5. All 12 hyperparameter runs per algorithm; the best run is highlighted.", 15.5)
+doc.add_heading("b. Episodes To Converge", 2)
 P(NAR["convergence"])
+figure(A / "fig2_sweep_convergence.png", "Figure 5. All 12 hyperparameter runs per algorithm; the best run is highlighted.", 12.0)
 
-doc.add_heading("5.4 Generalization", 2)
-figure(A / "fig5_generalization.png", "Figure 6. Greedy evaluation on 200 unseen businesses from the training distribution and on the harder, unseen 'stress' population, compared with rule-based policies.", 16)
+doc.add_heading("c. Generalization", 2)
 P(NAR["generalization"])
-figure(A / "fig6_action_distribution.png", "Figure 7. Share of weeks in which each best agent selects each intervention.", 14.5)
+figure(A / "fig5_generalization.png", "Figure 6. Greedy evaluation on 200 unseen businesses from the training distribution and on the harder, unseen 'stress' population, compared with rule-based policies.", 16)
+figure(A / "fig6_action_distribution.png", "Figure 7. Share of weeks in which each best agent selects each intervention.", 12.5)
 P(NAR["behaviour"])
 
 # ------------------------------------------------------------------ 6
