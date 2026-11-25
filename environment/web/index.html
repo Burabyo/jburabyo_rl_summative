@@ -52,7 +52,7 @@
   <span class="sw" style="background:#3ecf8e"></span>Filed on time<br>
   <span class="sw" style="background:#ff3b4e"></span>Missed (penalty)<br><br>
   <b>Agent messages</b><br>Orbs fly from the Imisoro tower to the shop. Escalations travel to RRA.<br><br>
-  Drag to orbit · scroll to zoom
+  Drag to orbit · scroll to zoom · R resets view
 </div>
 <div id="log" class="panel"></div>
 
@@ -78,11 +78,26 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1420);
-scene.fog = new THREE.Fog(0x0e1420, 40, 90);
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
-camera.position.set(0, 22, 30);
+scene.fog = new THREE.Fog(0x0e1420, 80, 160);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 300);
 const controls = new OrbitControls(camera, canvas);
-controls.target.set(0, 1, 0); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.47;
+controls.enableDamping = true; controls.enablePan = false;
+// keep the camera in a range where the whole scene stays readable
+controls.minPolarAngle = Math.PI * 0.15; controls.maxPolarAngle = Math.PI * 0.36;
+controls.minDistance = 28; controls.maxDistance = 75;
+// default overview: whole calendar ring visible, scene centred in the space right of the HUD
+function defaultView() {
+  const aspect = innerWidth / innerHeight;
+  const hTan = Math.tan(THREE.MathUtils.degToRad(22.5)) * aspect;
+  const fit = Math.max(23 / Math.min(hTan, 0.85), 23 / Math.tan(THREE.MathUtils.degToRad(22.5)) * 0.75);
+  const d = THREE.MathUtils.clamp(fit * (aspect < 1.7 ? 1.12 : 1.0), controls.minDistance, controls.maxDistance);
+  const tilt = THREE.MathUtils.degToRad(52);            // angle above the ground
+  const shiftX = innerWidth > 1100 ? -0.12 * d * hTan : 0;  // move scene right, away from the HUD
+  controls.target.set(shiftX, 0, 2);
+  camera.position.set(shiftX, Math.sin(tilt) * d, 2 + Math.cos(tilt) * d);
+  controls.update();
+}
+addEventListener("keydown", e => { if (e.key === "r" || e.key === "R") defaultView(); });
 
 scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x1a1f2b, 0.9));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
@@ -229,7 +244,7 @@ poll();
 
 // ---------- loop
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-addEventListener("resize", resize); resize();
+addEventListener("resize", () => { resize(); defaultView(); }); resize(); defaultView();
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = clock.getDelta(), t = clock.elapsedTime;
