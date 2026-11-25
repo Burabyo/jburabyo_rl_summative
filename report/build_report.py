@@ -22,8 +22,8 @@ sys.path.insert(0, str(ROOT))
 A = ROOT / "assets"
 OUT = ROOT / "report" / "RL_Summative_Report.docx"
 
-STUDENT = "J. Burabyo"            # edit: full name
-VIDEO = "[add video link]"         # edit
+STUDENT = "Jolly Burabyo"            # edit: full name
+VIDEO = "https://www.awesomescreenshot.com/video/58674375?key=cdd2ac5efe5a4b2ea6ccc4137b1393e4"         # edit
 REPO = "https://github.com/Burabyo/jburabyo_rl_summative"  # edit
 
 df = pd.read_csv(ROOT / "logs" / "sweep_results.csv")

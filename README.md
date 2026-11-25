@@ -11,6 +11,8 @@ Four TorchRL agents are compared on the same environment: **DQN**, **REINFORCE**
 
 ![3D environment](assets/env_render.png)
 
+**Video demo:** https://www.awesomescreenshot.com/video/58674375?key=cdd2ac5efe5a4b2ea6ccc4137b1393e4
+
 ## Quick start (uv only)
 
 ```bash
