@@ -90,7 +90,8 @@ function defaultView() {
   const aspect = innerWidth / innerHeight;
   const hTan = Math.tan(THREE.MathUtils.degToRad(22.5)) * aspect;
   const fit = Math.max(23 / Math.min(hTan, 0.85), 23 / Math.tan(THREE.MathUtils.degToRad(22.5)) * 0.75);
-  const d = THREE.MathUtils.clamp(fit * (aspect < 1.7 ? 1.12 : 1.0), controls.minDistance, controls.maxDistance);
+  const d = THREE.MathUtils.clamp(fit * (aspect < 1.7 ? 1.12 : 1.0), 28, 75);
+  controls.minDistance = d * 0.8; controls.maxDistance = d * 1.25;  // zoom only a little around the overview
   const tilt = THREE.MathUtils.degToRad(52);            // angle above the ground
   const shiftX = innerWidth > 1100 ? -0.12 * d * hTan : 0;  // move scene right, away from the HUD
   controls.target.set(shiftX, 0, 2);
