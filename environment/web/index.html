@@ -9,7 +9,7 @@
           --good:#3ecf8e; --bad:#ff5d6c; --warn:#ffb547; --accent:#4da3ff; }
   html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
               font:13px/1.4 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
-  #c { position:fixed; inset:0; }
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; }
   .panel { position:fixed; background:var(--panel); border:1px solid var(--line); border-radius:10px;
            padding:12px 14px; backdrop-filter:blur(6px); }
   #hud { top:14px; left:14px; width:300px; }
@@ -27,6 +27,7 @@
   .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
   .good { color:var(--good) } .bad { color:var(--bad) } .warn { color:var(--warn) }
   #wait { position:fixed; inset:0; display:grid; place-items:center; color:var(--muted); font-size:15px; pointer-events:none; }
+  @media (max-width: 1400px) and (min-width: 761px) { .panel { zoom: .78; } }
   @media (max-width: 760px) { #legend { display:none } #log { width:calc(100% - 60px) } #hud { width:calc(100% - 60px) } }
 </style>
 </head>
@@ -90,10 +91,10 @@ function defaultView() {
   const aspect = innerWidth / innerHeight;
   const hTan = Math.tan(THREE.MathUtils.degToRad(22.5)) * aspect;
   const fit = Math.max(23 / Math.min(hTan, 0.85), 23 / Math.tan(THREE.MathUtils.degToRad(22.5)) * 0.75);
-  const d = THREE.MathUtils.clamp(fit * (aspect < 1.7 ? 1.12 : 1.0), 28, 75);
+  const d = THREE.MathUtils.clamp(fit * (aspect < 1.7 ? 1.12 : 1.0) * (innerWidth < 1400 ? 1.08 : 1.0), 28, 75);
   controls.minDistance = d * 0.8; controls.maxDistance = d * 1.25;  // zoom only a little around the overview
   const tilt = THREE.MathUtils.degToRad(52);            // angle above the ground
-  const shiftX = innerWidth > 1100 ? -0.12 * d * hTan : 0;  // move scene right, away from the HUD
+  const shiftX = innerWidth > 760 ? -0.12 * d * hTan : 0;  // move scene right, away from the HUD
   controls.target.set(shiftX, 0, 2);
   camera.position.set(shiftX, Math.sin(tilt) * d, 2 + Math.cos(tilt) * d);
   controls.update();
